@@ -156,6 +156,7 @@ class UnitTestAndCompilePlugin : Plugin<Project> {
         options.isFork = true
         options.encoding = "utf-8"
         options.isIncremental = true
+        options.forkOptions.jvmArgs?.add("-XX:+HeapDumpOnOutOfMemoryError")
         options.compilerArgs = mutableListOf("-Xlint:-options", "-Xlint:-path")
         if (!jdkForCompilation.current) {
             options.forkOptions.javaHome = jdkForCompilation.javaHome
@@ -218,6 +219,7 @@ class UnitTestAndCompilePlugin : Plugin<Project> {
     private
     fun Test.configureJvmForTest() {
         val jvmForTest = project.buildJvms.testJvm.get()
+
         jvmArgumentProviders.add(createCiEnvironmentProvider(this))
         executable = jvmForTest.javaExecutable.absolutePath
         environment["JAVA_HOME"] = jvmForTest.javaHome.absolutePath

@@ -78,6 +78,7 @@ data class CIBuildModel(
             functionalTests = listOf(
                 TestCoverage(8, TestType.soak, Os.linux, JvmCategory.MAX_VERSION.version, vendor = JvmCategory.MAX_VERSION.vendor),
                 TestCoverage(9, TestType.soak, Os.windows, JvmCategory.MIN_VERSION.version, vendor = JvmCategory.MIN_VERSION.vendor),
+                TestCoverage(35, TestType.soak, Os.macos, JvmCategory.MIN_VERSION.version, vendor = JvmCategory.MIN_VERSION.vendor),
                 TestCoverage(10, TestType.allVersionsCrossVersion, Os.linux, JvmCategory.MIN_VERSION.version, vendor = JvmCategory.MIN_VERSION.vendor),
                 TestCoverage(11, TestType.allVersionsCrossVersion, Os.windows, JvmCategory.MIN_VERSION.version, vendor = JvmCategory.MIN_VERSION.vendor),
                 TestCoverage(12, TestType.noDaemon, Os.linux, JvmCategory.MIN_VERSION.version, vendor = JvmCategory.MIN_VERSION.vendor),
@@ -132,6 +133,7 @@ data class CIBuildModel(
     val subprojects: GradleSubprojectList = GradleSubprojectList(
         listOf(
             GradleSubproject("antlr"),
+            GradleSubproject("baseAnnotations", unitTests = false, functionalTests = false),
             GradleSubproject("baseServices"),
             GradleSubproject("baseServicesGroovy", functionalTests = false),
             GradleSubproject("bootstrap", unitTests = false, functionalTests = false),
@@ -180,8 +182,8 @@ data class CIBuildModel(
             GradleSubproject("modelCore"),
             GradleSubproject("modelGroovy"),
             GradleSubproject("native"),
+            GradleSubproject("normalizationJava", functionalTests = false),
             GradleSubproject("persistentCache"),
-            GradleSubproject("baseAnnotations", unitTests = false, functionalTests = false),
             GradleSubproject("platformBase"),
             GradleSubproject("platformJvm"),
             GradleSubproject("platformNative"),

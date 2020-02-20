@@ -17,20 +17,20 @@
 package org.gradle.internal.vfs
 
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.gradle.integtests.fixtures.DirectoryBuildCacheFixture
 import org.gradle.integtests.fixtures.ToBeFixedForInstantExecution
+import org.gradle.integtests.fixtures.VfsRetentionFixture
 import org.gradle.integtests.fixtures.executer.GradleContextualExecuter
 import spock.lang.IgnoreIf
 
-import static org.gradle.internal.service.scopes.VirtualFileSystemServices.VFS_DROP_PROPERTY
-import static org.gradle.internal.service.scopes.VirtualFileSystemServices.VFS_RETENTION_ENABLED_PROPERTY
+import static org.gradle.integtests.fixtures.ToBeFixedForInstantExecution.Skip.FLAKY
 
 // The whole test makes no sense if there isn't a daemon to retain the state.
 @IgnoreIf({ GradleContextualExecuter.noDaemon || GradleContextualExecuter.vfsRetention })
-class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec {
+class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec implements DirectoryBuildCacheFixture, VfsRetentionFixture {
 
     def setup() {
         // Make the first build in each test drop the VFS state
-        executer.withArgument("-D$VFS_DROP_PROPERTY=true")
         executer.requireIsolatedDaemons()
     }
 
@@ -176,7 +176,7 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         mainSourceFile.text = sourceFileWithGreeting("Hello World!")
 
         when:
-        run "run"
+        withoutRetention().run "run"
         then:
         outputContains "Hello World!"
         executedAndNotSkipped ":compileJava", ":classes", ":run"
@@ -208,7 +208,7 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
 
         when:
         mainSourceFile.text = sourceFileWithGreeting("Hello VFS!")
-        run "run"
+        withoutRetention().run "run"
         then:
         outputContains "Hello VFS!"
         executedAndNotSkipped ":compileJava", ":classes", ":run"
@@ -226,7 +226,7 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         outputContains(incubatingMessage)
 
         when:
-        run("assemble")
+        withoutRetention().run("assemble")
         then:
         outputDoesNotContain(incubatingMessage)
     }
@@ -407,16 +407,70 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
         executedAndNotSkipped(":jar")
     }
 
+    @ToBeFixedForInstantExecution(skip = FLAKY, because = "https://github.com/gradle/instant-execution/issues/213")
+    def "detects when local state is removed"() {
+        buildFile << """
+            plugins {
+                id 'base'
+            }
+
+            @CacheableTask
+            abstract class WithLocalStateDirectory extends DefaultTask {
+                @LocalState
+                abstract DirectoryProperty getLocalStateDirectory()
+                @OutputFile
+                abstract RegularFileProperty getOutputFile()
+
+                @TaskAction
+                void doStuff() {
+                    def localStateDir = localStateDirectory.get().asFile
+                    localStateDir.mkdirs()
+                    new File(localStateDir, "localState.txt").text = "localState"
+                    outputFile.get().asFile.text = "output"
+                }
+            }
+
+            abstract class WithOutputFile extends DefaultTask {
+                @OutputFile
+                abstract RegularFileProperty getOutputFile()
+
+                @TaskAction
+                void doStuff() {
+                    outputFile.get().asFile.text = "outputFile"
+                }
+            }
+
+            task localStateTask(type: WithLocalStateDirectory) {
+                localStateDirectory = file("build/overlap")
+                outputFile = file("build/localStateOutput.txt")
+            }
+
+            task outputFileTask(type: WithOutputFile) {
+                outputFile = file("build/overlap/outputFile.txt")
+            }
+        """
+        def localStateOutputFile = file("build/localStateOutput.txt")
+
+        when:
+        withRetention().withBuildCache().run("localStateTask", "outputFileTask")
+        then:
+        executedAndNotSkipped(":localStateTask", ":outputFileTask")
+        localStateOutputFile.exists()
+
+        when:
+        localStateOutputFile.delete()
+        waitForChangesToBePickedUp()
+        withRetention().withBuildCache().run("localStateTask", "outputFileTask")
+        then:
+        skipped(":localStateTask")
+        executedAndNotSkipped(":outputFileTask")
+    }
+
     // This makes sure the next Gradle run starts with a clean BuildOutputCleanupRegistry
     private void invalidateBuildOutputCleanupState() {
         file(".gradle/buildOutputCleanup/cache.properties").text = """
             gradle.version=1.0
         """
-    }
-
-    private def withRetention() {
-        executer.withArgument  "-D${VFS_RETENTION_ENABLED_PROPERTY}"
-        this
     }
 
     private static String sourceFileWithGreeting(String greeting) {
@@ -441,9 +495,5 @@ class VirtualFileSystemRetentionIntegrationTest extends AbstractIntegrationSpec 
                 }
             }
         """
-    }
-
-    private static void waitForChangesToBePickedUp() {
-        Thread.sleep(1000)
     }
 }

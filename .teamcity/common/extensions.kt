@@ -107,13 +107,13 @@ fun buildToolGradleParameters(daemon: Boolean = true, isContinue: Boolean = true
         // for each test task, such that we are independent of whatever default value is defined in the build itself.
         "-Dorg.gradle.workers.max=%maxParallelForks%",
         "-PmaxParallelForks=%maxParallelForks%",
+        // Drop the VFS on before the build CI for dogfooding, until we do that automatically
+        "-Dorg.gradle.unsafe.vfs.drop=true",
         "-s",
         if (daemon) "--daemon" else "--no-daemon",
         if (isContinue) "--continue" else "",
         """-I "%teamcity.build.checkoutDir%/gradle/init-scripts/build-scan.init.gradle.kts"""",
-        "-Dorg.gradle.internal.tasks.createops",
-        // // https://github.com/gradle/gradle-private/issues/2725
-        if (os == Os.macos) "" else "-Dorg.gradle.internal.plugins.portal.url.override=%gradle.plugins.portal.url%"
+        "-Dorg.gradle.internal.tasks.createops"
     )
 
 fun buildToolParametersString(daemon: Boolean = true, os: Os = Os.linux) = buildToolGradleParameters(daemon, os = os).joinToString(separator = " ")

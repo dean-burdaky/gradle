@@ -215,7 +215,6 @@ class ArchiveIntegrationTest extends AbstractIntegrationSpec {
         file('dest').assertHasDescendants('someDir/1.txt')
     }
 
-    @ToBeFixedForInstantExecution
     def "allows user to provide a custom resource for the tarTree"() {
         given:
         TestFile tar = file('tar-contents')
@@ -871,7 +870,7 @@ class ArchiveIntegrationTest extends AbstractIntegrationSpec {
     }
 
     @Issue("https://github.com/gradle/gradle#1108")
-    @ToBeFixedForInstantExecution
+    @ToBeFixedForInstantExecution(iterationMatchers = ".*includeEmptyDirs=true.*")
     def "can copy files into a different root with includeEmptyDirs=#includeEmptyDirs"() {
         Assume.assumeFalse("This test case is not implemented when includeEmptyDirs=true", includeEmptyDirs)
 

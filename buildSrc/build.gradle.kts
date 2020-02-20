@@ -96,6 +96,10 @@ allprojects {
             name = "kotlin-dev"
             url = uri("https://dl.bintray.com/kotlin/kotlin-dev")
         }
+        maven {
+            name = "kotlin-eap"
+            url = uri("https://dl.bintray.com/kotlin/kotlin-eap")
+        }
     }
 }
 
@@ -203,6 +207,7 @@ fun Project.applyGroovyProjectConventions() {
     tasks.withType<GroovyCompile>().configureEach {
         groovyOptions.apply {
             encoding = "utf-8"
+            forkOptions.jvmArgs?.add("-XX:+HeapDumpOnOutOfMemoryError")
         }
         options.apply {
             isFork = true
