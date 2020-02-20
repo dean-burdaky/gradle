@@ -1,2 +1,4 @@
-apply plugin: 'idea'
+plugins {
+    id 'idea'
+}
 idea.project.jdkName = 1.6
